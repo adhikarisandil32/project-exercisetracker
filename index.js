@@ -134,11 +134,9 @@ app.get("/api/users/:userId/logs", async (req, res) => {
 
   const {
     from = "0000-01-01T00:00:00Z",
-    to = new Date().toString(),
+    to = new Date().toDateString(),
     upLimit = null,
   } = req.query
-
-  console.log(`${from}, ${to}, ${upLimit}`)
 
   const logs = await logModel.aggregate([
     {
@@ -155,7 +153,7 @@ app.get("/api/users/:userId/logs", async (req, res) => {
             cond: {
               $and: [
                 {
-                  $lt: [
+                  $lte: [
                     {
                       $dateFromString: {
                         dateString: "$$eachLog.date",
@@ -164,13 +162,12 @@ app.get("/api/users/:userId/logs", async (req, res) => {
                     {
                       $dateFromString: {
                         dateString: to,
-                        onError: new Date(),
                       },
                     },
                   ],
                 },
                 {
-                  $gt: [
+                  $gte: [
                     {
                       $dateFromString: {
                         dateString: "$$eachLog.date",
@@ -179,7 +176,6 @@ app.get("/api/users/:userId/logs", async (req, res) => {
                     {
                       $dateFromString: {
                         dateString: from,
-                        onError: new Date("0000-01-01"),
                       },
                     },
                   ],
