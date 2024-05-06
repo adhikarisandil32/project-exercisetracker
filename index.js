@@ -132,7 +132,13 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
 app.get("/api/users/:userId/logs", async (req, res) => {
   const userId = req.params.userId
 
-  const { from, to, upLimit } = req.query
+  const {
+    from = "0000-01-01T00:00:00Z",
+    to = new Date().toString(),
+    upLimit = null,
+  } = req.query
+
+  console.log(`${from}, ${to}, ${upLimit}`)
 
   const logs = await logModel.aggregate([
     {
