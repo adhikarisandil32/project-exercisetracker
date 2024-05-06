@@ -37,7 +37,19 @@ app.post("/api/users", async (req, res) => {
   return res.json(recentlyRegisteredUser)
 })
 
+//get request to users endpoint
+app.get("/api/users", async (req, res) => {
+  const users = await userModel.find({}).select(["-__v"])
+
+  return res.json(users)
+})
+
 app.post("/api/users/:userId/exercises", async (req, res) => {
+  const providedDate = new Date(req.body.date).toDateString()
+
+  const dateString =
+    providedDate === "Invalid Date" ? new Date().toDateString() : providedDate
+
   const foundUser = await userModel.findOne({
     _id: req.params.userId,
   })
@@ -58,7 +70,7 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
     const newlyCreatedExercise = await exerciseModel.create({
       _id: req.params.userId,
       username: foundUser.username,
-      date: new Date(req.body.date).toDateString(),
+      date: dateString,
       duration: req.body.duration,
       description: req.body.description,
     })
@@ -74,7 +86,7 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
       username: foundUser.username,
       log: [
         {
-          date: new Date(req.body.date).toDateString(),
+          date: dateString,
           duration: req.body.duration,
           description: req.body.description,
         },
@@ -84,16 +96,17 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
     return res.json(recentlyCreatedExercise)
   }
 
-  const updatedDataForExercise = await exerciseModel.updateOne(
+  const updatedDataForExercise = await exerciseModel.findOneAndUpdate(
     { _id: req.params.userId },
     {
-      _id: req.params.userId,
       username: foundUser.username,
-      date: new Date(req.body.date).toDateString(),
+      date: dateString,
       duration: req.body.duration,
       description: req.body.description,
     },
-    { new: true }
+    {
+      new: true,
+    }
   )
 
   const updatedDataForLogs = await logModel.updateOne(
@@ -101,7 +114,7 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
     {
       $push: {
         log: {
-          date: new Date(req.body.date).toDateString(),
+          date: dateString,
           duration: req.body.duration,
           description: req.body.description,
         },
@@ -119,10 +132,57 @@ app.post("/api/users/:userId/exercises", async (req, res) => {
 app.get("/api/users/:userId/logs", async (req, res) => {
   const userId = req.params.userId
 
+  const { from, to, upLimit } = req.query
+
   const logs = await logModel.aggregate([
     {
       $match: {
         _id: userId,
+      },
+    },
+    {
+      $addFields: {
+        log: {
+          $filter: {
+            input: "$log",
+            as: "eachLog",
+            cond: {
+              $and: [
+                {
+                  $lt: [
+                    {
+                      $dateFromString: {
+                        dateString: "$$eachLog.date",
+                      },
+                    },
+                    {
+                      $dateFromString: {
+                        dateString: to,
+                        onError: new Date(),
+                      },
+                    },
+                  ],
+                },
+                {
+                  $gt: [
+                    {
+                      $dateFromString: {
+                        dateString: "$$eachLog.date",
+                      },
+                    },
+                    {
+                      $dateFromString: {
+                        dateString: from,
+                        onError: new Date("0000-01-01"),
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            limit: upLimit,
+          },
+        },
       },
     },
     {
@@ -134,9 +194,7 @@ app.get("/api/users/:userId/logs", async (req, res) => {
     },
   ])
 
-  console.log(logs)
-
-  return res.json(logs)
+  return res.json(logs[0])
 })
 
 mongoose.connect(process.env.mongodb_url).then(() => {
