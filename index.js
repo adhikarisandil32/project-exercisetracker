@@ -135,8 +135,10 @@ app.get("/api/users/:userId/logs", async (req, res) => {
   const {
     from = "0000-01-01T00:00:00Z",
     to = new Date().toDateString(),
-    upLimit = null,
+    limit = null,
   } = req.query
+
+  console.log(`${from} || ${to} || ${limit}`)
 
   const logs = await logModel.aggregate([
     {
@@ -182,7 +184,7 @@ app.get("/api/users/:userId/logs", async (req, res) => {
                 },
               ],
             },
-            limit: upLimit,
+            limit: Number(limit) ? Number(limit) : null,
           },
         },
       },

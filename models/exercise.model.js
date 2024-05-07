@@ -23,7 +23,7 @@ const exerciseSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { versionKey: false }
+  { versionKey: false, autoIndex: false }
   // to disable __v
 )
 
